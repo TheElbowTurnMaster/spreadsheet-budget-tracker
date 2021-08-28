@@ -51,7 +51,7 @@ async function getLastRow(client) {
   };
   const options = {
     spreadsheetId: ACTIVE_SHEET,
-    range: 'A:K',
+    range: 'A:L',
     resource,
     valueInputOption: 'RAW',
     auth: client
@@ -65,7 +65,7 @@ async function getLastRow(client) {
     const rowNum = parseInt(range.replace(/.*!\w+\d+:(\w+?)(\d+)/, '$2'));
     const readOptions = {
       spreadsheetId: ACTIVE_SHEET,
-      range: `A${rowNum}:K${rowNum}`,
+      range: `A${rowNum}:L${rowNum}`,
       auth: client
     };
     sheets.spreadsheets.values.get(readOptions, async (err, res) => {
@@ -73,7 +73,7 @@ async function getLastRow(client) {
         console.log(err);
         return;
       }
-      const lastId = res.data.values[0][10];
+      const lastId = res.data.values[0][11];
       const transactions = await getLastWeekTransactions(lastId);
       // console.log(transactions);
       writeSheet(client, transactions);
@@ -87,7 +87,7 @@ async function writeSheet(client, newTransactions) {
   const resource = { values };
   const options = {
     spreadsheetId: ACTIVE_SHEET,
-    range: 'A:K',
+    range: 'A:L',
     resource,
     valueInputOption: 'RAW',
     auth: client
@@ -97,7 +97,7 @@ async function writeSheet(client, newTransactions) {
 
 async function getLastWeekTransactions(lastId) {
   const accessToken = PLAID_ACCOUNT;
-  const startDate = moment().subtract(1, 'week').format('YYYY-MM-DD');
+  const startDate = moment().subtract(15, 'day').format('YYYY-MM-DD');
   const endDate = moment().format('YYYY-MM-DD');
   const configs = {
     access_token: accessToken,
@@ -117,7 +117,7 @@ async function getLastWeekTransactions(lastId) {
       accountsMap[a.account_id] = a.name;
     });
 
-    const transactions = transactionsResponse.data.transactions;
+    const transactions = transactionsResponse.data.transactions.filter(t => !t.pending);
     let lastIndex = transactions.findIndex(trans => trans.transaction_id == lastId);
     if (lastIndex == -1) {
       lastIndex = transactions.length;
@@ -133,6 +133,7 @@ async function getLastWeekTransactions(lastId) {
       t.amount,
       t.amount < 0 ? "In" : "Out",
       t.category.join(', '),
+      t.authorized_date || "",
       t.transaction_id
     ]);
     return listTransactions.reverse();
@@ -141,4 +142,4 @@ async function getLastWeekTransactions(lastId) {
   }
 }
 
-// module.exports.updateSheet();
+module.exports.updateSheet();
